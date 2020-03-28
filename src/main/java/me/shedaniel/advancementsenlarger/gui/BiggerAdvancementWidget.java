@@ -7,6 +7,8 @@ package me.shedaniel.advancementsenlarger.gui;
 
 import com.google.common.collect.Lists;
 import com.mojang.blaze3d.systems.RenderSystem;
+import java.util.ArrayList;
+import java.util.Collection;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.advancement.Advancement;
@@ -26,6 +28,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import net.minecraft.client.gui.screen.Screen;
 
 @Environment(EnvType.CLIENT)
 public class BiggerAdvancementWidget extends DrawableHelper {
@@ -43,6 +46,8 @@ public class BiggerAdvancementWidget extends DrawableHelper {
     private final int yPos;
     private BiggerAdvancementWidget parent;
     private AdvancementProgress progress;
+    
+    private boolean dumped;
     
     public BiggerAdvancementWidget(BiggerAdvancementTab tab, MinecraftClient client, Advancement advancement, AdvancementDisplay display) {
         this.tab = tab;
@@ -65,6 +70,7 @@ public class BiggerAdvancementWidget extends DrawableHelper {
         }
         
         this.width = l + 3 + 5;
+        this.dumped = false;
     }
     
     private List<String> wrapDescription(String description, int width) {
@@ -271,6 +277,29 @@ public class BiggerAdvancementWidget extends DrawableHelper {
         }
         
         this.client.getItemRenderer().renderGuiItem((LivingEntity) null, this.display.getIcon(), originX + this.xPos + 8, originY + this.yPos + 5);
+        
+        if (Screen.hasShiftDown()) {
+            if (!dumped) {
+                dump(progress.getObtainedCriteria());
+                dump(progress.getUnobtainedCriteria());
+                // System.out.println(progress.toString());
+                dumped = true;
+            }
+        } else {
+            dumped = false;
+        }
+    }
+    
+    private void dump(Iterable<String> criteria) {
+        // criteria is actually a List<> .. but play nice
+        ArrayList<String> sorted=new ArrayList<>();
+        for (String s:criteria) {
+            sorted.add(s);
+        } 
+        Collections.sort(sorted);
+        for (String s: sorted) {
+            System.out.println(s + ":" + (progress.getCriterionProgress(s).isObtained() ? "OK" : "missing"));
+        }
     }
     
     protected void method_2324(int i, int j, int k, int l, int m, int n, int o, int p, int q) {
