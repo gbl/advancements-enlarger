@@ -7,6 +7,9 @@ package me.shedaniel.advancementsenlarger.gui;
 
 import com.google.common.collect.Maps;
 import com.mojang.blaze3d.systems.RenderSystem;
+import java.util.Iterator;
+import java.util.Map;
+import javax.annotation.Nullable;
 import me.shedaniel.advancementsenlarger.hooks.AdvancementTabTypeHooks;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -20,10 +23,6 @@ import net.minecraft.client.texture.TextureManager;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
-
-import javax.annotation.Nullable;
-import java.util.Iterator;
-import java.util.Map;
 
 @Environment(EnvType.CLIENT)
 public class BiggerAdvancementTab extends DrawableHelper {
@@ -143,7 +142,8 @@ public class BiggerAdvancementTab extends DrawableHelper {
         RenderSystem.popMatrix();
     }
     
-    public void drawWidgetTooltip(int mouseX, int mouseY, int x, int y) {
+    public BiggerAdvancementWidget drawWidgetTooltip(int mouseX, int mouseY, int x, int y) {
+        BiggerAdvancementWidget underMouse = null;
         int width = screen.width - 34;
         int height = screen.height - 68;
         RenderSystem.pushMatrix();
@@ -160,6 +160,7 @@ public class BiggerAdvancementTab extends DrawableHelper {
                 if (advancementWidget.shouldRender(i, j, mouseX, mouseY)) {
                     bl = true;
                     advancementWidget.drawTooltip(i, j, this.alpha, x, y);
+                    underMouse = advancementWidget;
                     break;
                 }
             }
@@ -171,7 +172,7 @@ public class BiggerAdvancementTab extends DrawableHelper {
         } else {
             this.alpha = MathHelper.clamp(this.alpha - 0.04F, 0.0F, 1.0F);
         }
-        
+        return underMouse;
     }
     
     public boolean isClickOnTab(int screenX, int screenY, double mouseX, double mouseY) {

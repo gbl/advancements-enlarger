@@ -7,6 +7,11 @@ package me.shedaniel.advancementsenlarger.gui;
 
 import com.google.common.collect.Maps;
 import com.mojang.blaze3d.systems.RenderSystem;
+import java.lang.reflect.Method;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import javax.annotation.Nullable;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.advancement.Advancement;
 import net.minecraft.advancement.AdvancementProgress;
@@ -22,11 +27,6 @@ import net.minecraft.client.util.NarratorManager;
 import net.minecraft.server.network.packet.AdvancementTabC2SPacket;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Lazy;
-
-import javax.annotation.Nullable;
-import java.lang.reflect.Method;
-import java.util.Iterator;
-import java.util.Map;
 
 public class BiggerAdvancementsScreen extends Screen implements ClientAdvancementManager.Listener {
     private static final Identifier WINDOW_TEXTURE = new Identifier("advancements-enlarger:textures/gui/advancements/recipecontainer.png");
@@ -48,6 +48,8 @@ public class BiggerAdvancementsScreen extends Screen implements ClientAdvancemen
         }
         return null;
     });
+    private BiggerAdvancementWidget underMouse;
+    private List<BiggerAdvancementCriterionInfo> infoLines;
     
     public BiggerAdvancementsScreen(ClientAdvancementManager clientAdvancementManager, AdvancementsScreen screen) {
         super(NarratorManager.EMPTY);
@@ -92,8 +94,15 @@ public class BiggerAdvancementsScreen extends Screen implements ClientAdvancemen
         return true;
     }
     
+    @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (button == 0) {
+            
+            if (underMouse != null) {
+                infoLines = underMouse.getCriteriaList();
+                underMouse.dump();
+            }
+
             int i = 8;
             int j = 33;
             Iterator var8 = this.tabs.values().iterator();
@@ -102,6 +111,7 @@ public class BiggerAdvancementsScreen extends Screen implements ClientAdvancemen
                 BiggerAdvancementTab advancementTab = (BiggerAdvancementTab) var8.next();
                 if (advancementTab.isClickOnTab(i, j, mouseX, mouseY)) {
                     this.advancementHandler.selectTab(advancementTab.getRoot(), true);
+                    this.infoLines = null;
                     break;
                 }
             }
@@ -127,6 +137,19 @@ public class BiggerAdvancementsScreen extends Screen implements ClientAdvancemen
         this.drawAdvancementTree(mouseX, mouseY, i, j);
         this.drawWidgets(i, j);
         this.drawWidgetTooltip(mouseX, mouseY, i, j);
+        
+        if (infoLines != null) {
+            RenderSystem.pushMatrix();
+            // RenderSystem.disableDepthTest();
+            RenderSystem.translatef(0.0F, 0.0F, 999.0F);
+            i = width * 2 / 3;
+            j = 55;
+            for (BiggerAdvancementCriterionInfo line: infoLines) {
+                this.font.draw(line.getName(), i, j, line.getObtained() ? 0x00ff00 : 0xff0000);
+                j += this.font.fontHeight+2;
+            }
+            RenderSystem.popMatrix();
+        }
     }
     
     public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
@@ -261,7 +284,7 @@ public class BiggerAdvancementsScreen extends Screen implements ClientAdvancemen
             RenderSystem.pushMatrix();
             RenderSystem.enableDepthTest();
             RenderSystem.translatef((float) (x + 9), (float) (y + 18), 400.0F);
-            this.selectedTab.drawWidgetTooltip(mouseX - x - 9, mouseY - y - 18, x, y);
+            underMouse = this.selectedTab.drawWidgetTooltip(mouseX - x - 9, mouseY - y - 18, x, y);
             RenderSystem.disableDepthTest();
             RenderSystem.popMatrix();
         }

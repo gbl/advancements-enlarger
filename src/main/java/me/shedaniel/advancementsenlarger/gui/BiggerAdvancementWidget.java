@@ -8,7 +8,12 @@ package me.shedaniel.advancementsenlarger.gui;
 import com.google.common.collect.Lists;
 import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import javax.annotation.Nullable;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.advancement.Advancement;
@@ -17,18 +22,12 @@ import net.minecraft.advancement.AdvancementProgress;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawableHelper;
+import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.advancement.AdvancementObtainedStatus;
+import net.minecraft.client.resource.language.I18n;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
-
-import javax.annotation.Nullable;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import net.minecraft.client.gui.screen.Screen;
 
 @Environment(EnvType.CLIENT)
 public class BiggerAdvancementWidget extends DrawableHelper {
@@ -280,9 +279,7 @@ public class BiggerAdvancementWidget extends DrawableHelper {
         
         if (Screen.hasShiftDown()) {
             if (!dumped) {
-                dump(progress.getObtainedCriteria());
-                dump(progress.getUnobtainedCriteria());
-                // System.out.println(progress.toString());
+                dump();
                 dumped = true;
             }
         } else {
@@ -290,7 +287,22 @@ public class BiggerAdvancementWidget extends DrawableHelper {
         }
     }
     
-    private void dump(Iterable<String> criteria) {
+    public void dump() {
+        List<BiggerAdvancementCriterionInfo> list = getCriteriaList();
+        for (BiggerAdvancementCriterionInfo line: list) {
+            System.out.println(line.getName() + ":" + (line.getObtained() ? "OK" : "missing"));
+        }
+    }
+    
+    public List<BiggerAdvancementCriterionInfo> getCriteriaList() {
+        List<BiggerAdvancementCriterionInfo> result = new ArrayList<>();
+        addCriteria(result, progress.getUnobtainedCriteria());
+        addCriteria(result, progress.getObtainedCriteria());
+        return result;
+    }
+    
+    private void addCriteria(List<BiggerAdvancementCriterionInfo> result, Iterable<String> criteria) {
+        final String[] prefixes = new String[] { "item.minecraft", "block.minecraft", "entity.minecraft", "container", "effect.minecraft", "biome.minecraft" };
         // criteria is actually a List<> .. but play nice
         ArrayList<String> sorted=new ArrayList<>();
         for (String s:criteria) {
@@ -298,10 +310,21 @@ public class BiggerAdvancementWidget extends DrawableHelper {
         } 
         Collections.sort(sorted);
         for (String s: sorted) {
-            System.out.println(s + ":" + (progress.getCriterionProgress(s).isObtained() ? "OK" : "missing"));
+            String translation = s;
+            String key = s;
+            if (key.startsWith("minecraft:")) {
+                key=key.substring(10);
+            }
+            for (String prefix: prefixes) {
+                if (I18n.hasTranslation(prefix+"."+key)) {
+                    translation = I18n.translate(prefix+"."+key);
+                    break;
+                }
+            }
+            result.add(new BiggerAdvancementCriterionInfo(translation, progress.getCriterionProgress(s).isObtained()));
         }
     }
-    
+
     protected void method_2324(int i, int j, int k, int l, int m, int n, int o, int p, int q) {
         this.blit(i, j, p, q, m, m);
         this.method_2321(i + m, j, k - m - m, m, p + m, q, n - m - m, o);
