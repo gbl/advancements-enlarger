@@ -24,7 +24,8 @@ import net.minecraft.client.render.Tessellator;
 import net.minecraft.client.render.VertexFormats;
 import net.minecraft.client.resource.language.I18n;
 import net.minecraft.client.util.NarratorManager;
-import net.minecraft.server.network.packet.AdvancementTabC2SPacket;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.network.packet.c2s.play.AdvancementTabC2SPacket;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Lazy;
 
@@ -79,7 +80,7 @@ public class BiggerAdvancementsScreen extends Screen implements ClientAdvancemen
     
     public void removed() {
         this.advancementHandler.setListener((ClientAdvancementManager.Listener) null);
-        ClientPlayNetworkHandler clientPlayNetworkHandler = this.minecraft.getNetworkHandler();
+        ClientPlayNetworkHandler clientPlayNetworkHandler = this.client.getNetworkHandler();
         if (clientPlayNetworkHandler != null) {
             clientPlayNetworkHandler.sendPacket(AdvancementTabC2SPacket.close());
         }
@@ -121,22 +122,23 @@ public class BiggerAdvancementsScreen extends Screen implements ClientAdvancemen
     }
     
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (this.minecraft.options.keyAdvancements.matchesKey(keyCode, scanCode)) {
-            this.minecraft.openScreen((Screen) null);
-            this.minecraft.mouse.lockCursor();
+        if (this.client.options.keyAdvancements.matchesKey(keyCode, scanCode)) {
+            this.client.openScreen((Screen) null);
+            this.client.mouse.lockCursor();
             return true;
         } else {
             return super.keyPressed(keyCode, scanCode, modifiers);
         }
     }
     
-    public void render(int mouseX, int mouseY, float delta) {
+    @Override
+    public void render(MatrixStack stack, int mouseX, int mouseY, float delta) {
         int i = 8;
         int j = 33;
-        this.renderBackground();
-        this.drawAdvancementTree(mouseX, mouseY, i, j);
-        this.drawWidgets(i, j);
-        this.drawWidgetTooltip(mouseX, mouseY, i, j);
+        this.renderBackground(stack);
+        this.drawAdvancementTree(stack, mouseX, mouseY, i, j);
+        this.drawWidgets(stack, i, j);
+        this.drawWidgetTooltip(stack, mouseX, mouseY, i, j);
         
         if (infoLines != null) {
             RenderSystem.pushMatrix();
@@ -145,8 +147,8 @@ public class BiggerAdvancementsScreen extends Screen implements ClientAdvancemen
             i = width * 2 / 3;
             j = 55;
             for (BiggerAdvancementCriterionInfo line: infoLines) {
-                this.font.draw(line.getName(), i, j, line.getObtained() ? 0x00ff00 : 0xff0000);
-                j += this.font.fontHeight+2;
+                this.textRenderer.draw(stack, line.getName(), i, j, line.getObtained() ? 0x00ff00 : 0xff0000);
+                j += this.textRenderer.fontHeight+2;
             }
             RenderSystem.popMatrix();
         }
@@ -167,36 +169,36 @@ public class BiggerAdvancementsScreen extends Screen implements ClientAdvancemen
         }
     }
     
-    private void drawAdvancementTree(int mouseX, int mouseY, int x, int i) {
+    private void drawAdvancementTree(MatrixStack stack, int mouseX, int mouseY, int x, int i) {
         BiggerAdvancementTab advancementTab = this.selectedTab;
         if (advancementTab == null) {
-            fill(x + 9, i + 18, width - 9, height - 17, -16777216);
+            fill(stack, x + 9, i + 18, width - 9, height - 17, -16777216);
             String string = I18n.translate("advancements.empty");
-            int j = this.font.getStringWidth(string);
-            font.draw(string, (width - j) / 2, (height - 33) / 2 + 33 - 9 / 2, -1);
-            font.draw(":(", (width - this.font.getStringWidth(":(")) / 2, (height - 33) / 2 + 33 + 9 + 9 / 2, -1);
+            int j = this.textRenderer.getWidth(string);
+            textRenderer.draw(stack, string, (width - j) / 2, (height - 33) / 2 + 33 - 9 / 2, -1);
+            textRenderer.draw(stack, ":(", (width - this.textRenderer.getWidth(":(")) / 2, (height - 33) / 2 + 33 + 9 + 9 / 2, -1);
         } else {
             RenderSystem.pushMatrix();
             RenderSystem.translatef((float) (x + 9), (float) (i + 18), 0.0F);
-            advancementTab.render();
+            advancementTab.render(stack);
             RenderSystem.popMatrix();
             RenderSystem.depthFunc(515);
             RenderSystem.disableDepthTest();
         }
     }
     
-    public void drawWidgets(int x, int i) {
+    public void drawWidgets(MatrixStack stack, int x, int i) {
         RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
         RenderSystem.enableBlend();
-        drawWindow(x, i);
+        drawWindow(stack, x, i);
         if (this.tabs.size() > 1) {
-            this.minecraft.getTextureManager().bindTexture(isDarkMode() ? TABS_DARK_TEXTURE : TABS_TEXTURE);
+            this.client.getTextureManager().bindTexture(isDarkMode() ? TABS_DARK_TEXTURE : TABS_TEXTURE);
             Iterator var3 = this.tabs.values().iterator();
             
             BiggerAdvancementTab advancementTab2;
             while (var3.hasNext()) {
                 advancementTab2 = (BiggerAdvancementTab) var3.next();
-                advancementTab2.drawBackground(x, i, advancementTab2 == this.selectedTab);
+                advancementTab2.drawBackground(stack, x, i, advancementTab2 == this.selectedTab);
             }
             
             RenderSystem.enableRescaleNormal();
@@ -205,42 +207,42 @@ public class BiggerAdvancementsScreen extends Screen implements ClientAdvancemen
             
             while (var3.hasNext()) {
                 advancementTab2 = (BiggerAdvancementTab) var3.next();
-                advancementTab2.drawIcon(x, i, this.itemRenderer);
+                advancementTab2.drawIcon(stack, x, i, this.itemRenderer);
             }
             
             RenderSystem.disableBlend();
         }
         
-        this.font.draw(I18n.translate("gui.advancements"), (float) (x + 8), (float) (i + 6), isDarkMode() ? -1 : 4210752);
+        this.textRenderer.draw(stack, I18n.translate("gui.advancements"), (float) (x + 8), (float) (i + 6), isDarkMode() ? -1 : 4210752);
     }
     
-    private void drawWindow(int x, int y) {
+    private void drawWindow(MatrixStack stack, int x, int y) {
         boolean darkMode = isDarkMode();
-        this.minecraft.getTextureManager().bindTexture(!darkMode ? WINDOW_TEXTURE : WINDOW_DARK_TEXTURE);
+        this.client.getTextureManager().bindTexture(!darkMode ? WINDOW_TEXTURE : WINDOW_DARK_TEXTURE);
         int width = this.width - 16;
         int height = this.height - 41;
         //Four Corners
-        this.blit(x, y, 106, 124 + 66, 4, 4);
-        this.blit(x + width - 4, y, 252, 124 + 66, 4, 4);
-        this.blit(x, y + height - 4, 106, 186 + 66, 4, 4);
-        this.blit(x + width - 4, y + height - 4, 252, 186 + 66, 4, 4);
+        this.drawTexture(stack, x, y, 106, 124 + 66, 4, 4);
+        this.drawTexture(stack, x + width - 4, y, 252, 124 + 66, 4, 4);
+        this.drawTexture(stack, x, y + height - 4, 106, 186 + 66, 4, 4);
+        this.drawTexture(stack, x + width - 4, y + height - 4, 252, 186 + 66, 4, 4);
         
         //Sides
         for(int xx = 4; xx < width - 4; xx += 128) {
             int thisWidth = Math.min(128, width - 4 - xx);
-            this.blit(x + xx, y, 110, 124 + 66, thisWidth, 4);
-            this.blit(x + xx, y + height - 4, 110, 186 + 66, thisWidth, 4);
+            this.drawTexture(stack, x + xx, y, 110, 124 + 66, thisWidth, 4);
+            this.drawTexture(stack, x + xx, y + height - 4, 110, 186 + 66, thisWidth, 4);
         }
         for(int yy = 4; yy < height - 4; yy += 50) {
             int thisHeight = Math.min(50, height - 4 - yy);
-            this.blit(x, y + yy, 106, 128 + 66, 4, thisHeight);
-            this.blit(x + width - 4, y + yy, 252, 128 + 66, 4, thisHeight);
+            this.drawTexture(stack, x, y + yy, 106, 128 + 66, 4, thisHeight);
+            this.drawTexture(stack, x + width - 4, y + yy, 252, 128 + 66, 4, thisHeight);
         }
         int color = darkMode ? -13750738 : -3750202;
-        fillGradient(x + 4, y + 4, x + width - 4, y + 18, color, color);
-        fillGradient(x + 4, y + 4, x + 9, y + height - 4, color, color);
-        fillGradient(x + width - 9, y + 4, x + width - 4, y + height - 4, color, color);
-        fillGradient(x + 4, y + height - 9, x + width - 4, y + height - 4, color, color);
+        fillGradient(stack, x + 4, y + 4, x + width - 4, y + 18, color, color);
+        fillGradient(stack, x + 4, y + 4, x + 9, y + height - 4, color, color);
+        fillGradient(stack, x + width - 9, y + 4, x + width - 4, y + height - 4, color, color);
+        fillGradient(stack, x + 4, y + height - 9, x + width - 4, y + height - 4, color, color);
         RenderSystem.disableTexture();
         RenderSystem.enableBlend();
         RenderSystem.disableAlphaTest();
@@ -278,13 +280,15 @@ public class BiggerAdvancementsScreen extends Screen implements ClientAdvancemen
         RenderSystem.enableTexture();
     }
     
-    private void drawWidgetTooltip(int mouseX, int mouseY, int x, int y) {
+    private int getBlitOffset() { return 0; }       // @TODO this was a method in 1.15.2 but isn't in 1.16
+    
+    private void drawWidgetTooltip(MatrixStack stack, int mouseX, int mouseY, int x, int y) {
         RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
         if (this.selectedTab != null) {
             RenderSystem.pushMatrix();
             RenderSystem.enableDepthTest();
             RenderSystem.translatef((float) (x + 9), (float) (y + 18), 400.0F);
-            underMouse = this.selectedTab.drawWidgetTooltip(mouseX - x - 9, mouseY - y - 18, x, y);
+            underMouse = this.selectedTab.drawWidgetTooltip(stack, mouseX - x - 9, mouseY - y - 18, x, y);
             RenderSystem.disableDepthTest();
             RenderSystem.popMatrix();
         }
@@ -295,7 +299,7 @@ public class BiggerAdvancementsScreen extends Screen implements ClientAdvancemen
             while (var5.hasNext()) {
                 BiggerAdvancementTab advancementTab = (BiggerAdvancementTab) var5.next();
                 if (advancementTab.isClickOnTab(x, y, (double) mouseX, (double) mouseY)) {
-                    this.renderTooltip(advancementTab.getTitle(), mouseX, mouseY);
+                    this.renderTooltip(stack, advancementTab.getTitle(), mouseX, mouseY);
                 }
             }
         }
@@ -304,7 +308,7 @@ public class BiggerAdvancementsScreen extends Screen implements ClientAdvancemen
     
     public void onRootAdded(Advancement root) {
         try {
-            BiggerAdvancementTab advancementTab = BiggerAdvancementTab.create(this.minecraft, this, this.tabs.size(), root);
+            BiggerAdvancementTab advancementTab = BiggerAdvancementTab.create(this.client, this, this.tabs.size(), root);
             if (advancementTab != null) {
                 this.tabs.put(root, advancementTab);
             }
